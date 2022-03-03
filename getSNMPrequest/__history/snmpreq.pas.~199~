@@ -1,0 +1,170 @@
+unit snmpreq;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
+  IdBaseComponent, IdComponent, IdUDPBase, IdUDPClient, IdSNMP, Data.DB, XMLIntf, XMLDoc,
+  Data.Win.ADODB, Xml.xmldom;
+
+type
+  TForm1 = class(TForm)
+    Button1: TButton;
+    fileOpn: TFileOpenDialog;
+    xmlFile: TXMLDocument;
+    ListBox1: TListBox;
+    procedure Button1Click(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  Form1: TForm1;
+  SNMP: TIdSNMP;
+  Idx: Integer;
+  str: String;
+  name, oid, valueType: string;
+  iNode: iXMLNode;
+  filePath: string;
+  i: integer = 0;
+  dtOIDs: TDataSet;
+implementation
+
+{$R *.dfm}
+
+
+procedure AddXMLNodesToListbox(xmlFile: TXMLDocument);
+var ListBox1: TListBox;
+    begin
+    with (xmlFile.DocumentElement.ChildNodes) do begin // Search nodes by name
+               xmlFile.Active := true;
+               ListBox1.AddItem(FindNode('name').Text, nil); // Adds node1's text to list
+               ListBox1.AddItem(FindNode('oid').Text, nil); // Adds node2's text to list
+               ListBox1.AddItem(FindNode('valueType').Text, nil); // Adds node4's text to list
+    end
+    end;
+
+procedure ProcessNode(cNode : IXMLNode);
+var  lastOid: string;
+
+begin
+if cNode = nil then Exit;
+//Przypisanie atrybutow xml do zmiennej Node
+if cNode.Attributes['name']<>Null then
+  name:=String(cNode.Attributes['name']);
+
+if cNode.Attributes['oid']<>Null then
+  oid:=String(cNode.Attributes['oid']);
+
+if cNode.Attributes['valueType']<>Null then
+  valueType:=String(cNode.Attributes['valueType']);
+      
+  if oid <> '' then
+  begin
+  if lastoid <> oid then
+    //zapytanie o konkretny pojedynczy port
+  
+  Snmp.Query.MIBAdd(oid, '');
+  end;
+
+       
+      cNode := cNode.ChildNodes.First;
+  while cNode <> nil do
+  begin
+    ProcessNode(cNode);
+    //przejscie do nastepnej pozycji w xmlu
+    cNode := cNode.NextSibling;
+  end;
+
+    //przejscie do nastepnej pozycji w xmlu
+    cNode := cNode.NextSibling;
+end;
+
+function GetXMLDoc(xmlFile: TXMLDocument): iXMLNode;
+begin
+//Wybór pliku do wczytania mibOID'ów
+    with TFileOpenDialog.Create(nil) do
+      try
+        Title := 'Wybierz plik';
+        Options := [fdoFileMustExist, fdoPathMustExist, fdoForceFileSystem];
+        OkButtonLabel := 'Wybierz';
+        DefaultFolder := filePath;
+        FileName := filePath;
+        if Execute then
+          filePath := FileName
+      finally
+        Free;
+
+    //Wczytanie mibOIDs z pliku xml
+    xmlFile.LoadFromFile(filePath);
+    xmlFile.Active := true;
+
+    iNode:=xmlFile.DocumentElement.ChildNodes.First;
+
+    result := iNode;
+    end
+end;
+
+procedure GetSNMPValue(var mibOID: string);
+begin
+    try
+    SNMP := TIdSNMP.Create(nil);
+    //Dane do po³¹czenia z SNMP
+    snmp.Query.Host:='192.168.1.199';
+    snmp.Query.Community := 'public';
+    Snmp.Query.PDUType := PDUGetRequest;
+    snmp.Query.MIBAdd(miboid,'');
+
+    //Jeœli wys³ane query jest poprawne to zwróæ mi Reply
+    if Snmp.SendQuery then
+      begin;
+        ShowMessage('Iloœæ rekordów: ' + IntToStr(Snmp.Reply.ValueCount));
+        //Jezeli SendQuery = true to dla kazdej odpowiedzi od snmp wyrzucic msgbox
+        for Idx := 0 to Snmp.Reply.ValueCount - 1 do
+          ShowMessage('Reply:'+ sLineBreak +
+          'name: '+ name + SlineBreak +
+          'oid: ' + oid + SlineBreak +
+          Snmp.reply.ValueOID[i] + ' ' + snmp.reply.Value[i]);
+      end
+    else
+      begin
+      //Jesli SendQuery = false wyrzuc mi msgbox o b³êdzie
+       ShowMessage('Wyst¹pi³ b³¹d podczas próby pobrania informacji o portach.');
+       end;
+    finally
+      snmp.Free;
+    end;
+end
+
+
+procedure TForm1.Button1Click(Sender: TObject);
+var lstBoxCount: Integer;
+var c: integer;
+begin
+    GetSNMPValue('1.3.6.1.2.1.1.1.0');
+
+//    iNode:= GetXMLDoc(xmlFile);
+//
+//    xmlFile.Active := true;
+//
+//    AddXMLNodesToListbox(xmlFile);
+
+
+//
+//    name:='';
+//    oid:='';
+//    valueType:='';
+//
+//    while iNode <> nil do
+//    begin
+//    ProcessNode(iNode);
+//    iNode:=iNode.NextSibling;
+//    end;
+    //lstboxcount := ListBox1.Count;
+//    for c := 0 to lstboxcount-1 do
+//      snmp.Query.MIBAdd(ListBox1.ItemAtPos[c],'');
+end;
+end.
