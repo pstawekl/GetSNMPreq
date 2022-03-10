@@ -1,0 +1,5 @@
+przypisuje wartosc do zmiennej iNode
+wywoluje okno dialogowe
+przypisuje wartosc do zmiennej iNode
+wywoluje okno dialogowe - 08.03.2022 09:49:52
+przypisuje wartosc do zmiennej iNode - 08.03.2022 09:49:55

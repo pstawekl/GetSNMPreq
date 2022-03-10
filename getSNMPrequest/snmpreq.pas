@@ -13,7 +13,6 @@ type
     Button1: TButton;
     fileOpn: TFileOpenDialog;
     xmlFile: TXMLDocument;
-    ListBox1: TListBox;
     procedure Button1Click(Sender: TObject);
   private
     { Private declarations }
@@ -25,10 +24,8 @@ var
   Form1: TForm1;
   SNMP: TIdSNMP;
   Idx: Integer;
-  str: String;
-  name, oid, valueType: string;
+  str, name, oid, valueType, filePath, lastOid: string;
   iNode: iXMLNode;
-  filePath: string;
   i: integer = 0;
   dtOIDs: TDataSet;
 implementation
@@ -80,41 +77,45 @@ begin
     end;
 end;
 
-procedure ProcessNode(cNode : IXMLNode);
-var  lastOid: string;
-
+procedure ProcessNode(Node : IXMLNode);
+var cNode: iXMLNode;
 begin
-if cNode = nil then Exit;
+if Node = nil then Exit;
 //Przypisanie atrybutow xml do zmiennej Node
-if cNode.Attributes['name']<>Null then
-  name:=String(cNode.Attributes['name']);
+if Node.Attributes['name']<>Null then
+  name:=String(Node.Attributes['name']);
 
-if cNode.Attributes['oid']<>Null then
-  oid:=String(cNode.Attributes['oid']);
+if Node.Attributes['oid']<>Null then
+  oid:=String(Node.Attributes['oid']);
 
-if cNode.Attributes['valueType']<>Null then
-  valueType:=String(cNode.Attributes['valueType']);
-      
-  if oid <> '' then
-  begin
-  if lastoid <> oid then
-    //zapytanie o konkretny pojedynczy port
-  
-  Snmp.Query.MIBAdd(oid, '');
-  end;
+if Node.Attributes['valueType']<>Null then
+  valueType:=String(Node.Attributes['valueType']);
 
-       
-      cNode := cNode.ChildNodes.First;
+  cNode := Node.ChildNodes.First;
+
   while cNode <> nil do
-  begin
-    GetSNMPValue(oid);
-    ProcessNode(cNode);
-    //przejscie do nastepnej pozycji w xmlu
-    cNode := cNode.NextSibling;
-  end;
+    begin
+          if lastoid <> oid  then
+          begin
+            if oid <> '' then
+            begin
+              GetSNMPValue(oid);
+            end;
+
+            if oid = '' then
+            begin
+              lastoid := '.';
+            end
+            else
+            begin
+              lastoid := oid;
+            end;
+          end;
+          ProcessNode(cNode);
 
     //przejscie do nastepnej pozycji w xmlu
     cNode := cNode.NextSibling;
+    end;
 end;
 
 function GetXMLDoc(xmlFile: TXMLDocument): iXMLNode;
@@ -142,24 +143,45 @@ begin
     end
 end;
 
-procedure TForm1.Button1Click(Sender: TObject);
-var lstBoxCount: Integer;
-var c: integer;
+procedure CreateLog(str: string);
+var filePath: string;
+fLog: TextFile;
+date: TDateTime;
 begin
-    GetSNMPValue('1.3.6.1.2.1.1.1.0');
-    GetSNMPValue('1.3.6.1.2.1.2.2.1.8.34603009');
-    GetSNMPValue('1.3.6.1.2.1.2.2.1.8.34603010');
+filepath:=ExpandFileName(GetCurrentDir + '\..\..\');
+if FileExists(filePath+'\log.txt\') then
+begin
+    AssignFile(fLog, filepath+'\log.txt');
+    Append(fLog)
+end
+   else
+begin
+    AssignFile(fLog, filepath+'\log.txt');
+     Append(fLog);
+end;
+  date:=Now;
+  WriteLn(fLog, str+' - '+DateToStr(date)+' '+TimeToStr(date));
+  Flush(fLog);
 
+  CloseFile(fLog);
+end;
+
+procedure TForm1.Button1Click(Sender: TObject);
+begin
+    CreateLog('wywoluje okno dialogowe');
     iNode:= GetXMLDoc(xmlFile);
 
     name:='';
     oid:='';
     valueType:='';
-
+    lastoid := '.';
+    createlog('przypisuje wartosc do zmiennej iNode');
     while iNode <> nil do
     begin
     ProcessNode(iNode);
     iNode:=iNode.NextSibling;
     end;
+
+    filePath := '';
 end;
 end.
